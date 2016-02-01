@@ -21,7 +21,8 @@
 
 
 
-void nsm_core(const size_t *irD,const size_t *jcD,const double *prD,
+
+void nsm_core(const size_t *irD,const size_t *jcD,double *prD,
               const int *u0,
               const size_t *irN,const size_t *jcN,const int *prN,
               const size_t *irG,const size_t *jcG,
@@ -31,8 +32,9 @@ void nsm_core(const size_t *irD,const size_t *jcD,const double *prD,
               const size_t Mspecies,const size_t Mreactions,
               const size_t dsize,int report_level,
               const size_t *irK,const size_t *jcK,const double *prK,
-              urdme_output_writer *writer)
-
+              urdme_output_writer *writer,
+              double theta,
+              double Csize)
 /* Specification of the inputs:
  
  Ncells
@@ -129,8 +131,62 @@ void nsm_core(const size_t *irD,const size_t *jcD,const double *prD,
     size_t i,j,it = 0;
     size_t to_node,to_vol = 0;
     const size_t Ndofs = Ncells*Mspecies;
+
+
+    printf("\ntheta = %f\n",theta);
+    printf("Csize = %f\n",Csize);
     
+/****************** Crowding Agent (Random) *************/
+    double geo[Ncells];
+    double rn;
+    //double theta = 0.90; // Crowding Density
+    //double Csize = 0.3; // 0.7: small crowding agent; 0.3: large crowding agent.
+    int geo_temp = 0;
+//    int sum = 0;
+//    do {
+//        sum = 0;
+        for(int geo_index = 0;geo_index<Ncells;geo_index++){
+           rn = drand48();
+           geo_temp = 1-theta+rn;
+	   geo[geo_index] = floor(geo_temp);
+//	   if(geo_temp == 0) geo[geo_index]+= (1.00-theta);
+	   if(geo_temp == 0) geo[geo_index]+= Csize;
+//            if(geo[geo_index] == 0) sum+=1;
+//        }
+    }
+//    while (sum != Ncells*(theta)); // Rejection Sampling
+/********************************************************/
+/********************* CHROMATIN ************************/
+#define ARRAYSIZE(x)  (sizeof(x)/sizeof(*(x)))
+   FILE *file;
+   float array[Ncells][1];
+   size_t iChrm, jChrm, kChrm;
+   char buffer[BUFSIZ], *ptr;
+   float Chrm[Ncells], MAX_Pixel = 190.00;
+   file = fopen("/usr/local/pyurdme/pyurdme/urdme/src/nsm/avg.txt","r");
+   if(file != NULL){
+       for ( iChrm = 0; fgets(buffer, sizeof buffer, file); ++iChrm )
+           for ( jChrm = 0, ptr = buffer; jChrm < ARRAYSIZE(*array); ++jChrm, ++ptr )
+               array[iChrm][jChrm] = (float)strtof(ptr, &ptr);
+       fclose(file);  
+       for (size_t idxx = 0; idxx<Ncells; idxx++)
+    //	 Chrm[idxx] = MAX_Pixel - array[idxx][0];
+          { Chrm[idxx] = (MAX_Pixel-array[idxx][0])/MAX_Pixel;
+	}
+	//printf("\n%f  %f  %f",idxx,array[idxx][0],Chrm[idxx]);}
+    }else{
+       for (size_t idxx = 0; idxx<Ncells; idxx++)
+           Chrm[idxx] = 1;
+    }
+
+for (int idxxx = 0; idxxx<Ncells; idxxx++)
+      // Chrm[idxx] = MAX_Pixel - array[idxx][0];
+      printf("\n%d %f %f",idxxx,array[idxxx][0],Chrm[idxxx]);
     
+printf("\n\nNCells = %u\n\n",Ncells);
+      // Chrm[idxx] = 66/(5+array[idxx][0]);
+//	 Chrm[idxx] = 1;
+/********************************************************/
     PropensityFun *rfun;
     rfun = ALLOC_propensities();
     
@@ -139,7 +195,7 @@ void nsm_core(const size_t *irD,const size_t *jcD,const double *prD,
         report = &reportFun1;
     else
         report = NULL;
-    
+//    
     /* Set xx to the initial state. xx will always hold the current solution. */
     xx = (int *)malloc(Ndofs*sizeof(int));
     memcpy(xx,u0,Ndofs*sizeof(int));
@@ -172,11 +228,23 @@ void nsm_core(const size_t *irD,const size_t *jcD,const double *prD,
     
     /* The diagonal value of the D-matrix is used frequently. For
      efficiency, we store the negative of D's diagonal in Ddiag. */
+    
     Ddiag = (double *)malloc(Ndofs*sizeof(double));
     for (i = 0; i < Ndofs; i++) {
         Ddiag[i] = 0.0;
+        size_t tmp_ndx;
         for (j = jcD[i]; j < jcD[i+1]; j++)
-        if (irD[j] == i) Ddiag[i] = -prD[j];
+            if (irD[j] != i){
+                prD[j] = prD[j]*geo[i/Mspecies]*Chrm[i/Mspecies];
+                Ddiag[i] += prD[j];
+            }else{
+                tmp_ndx = j;
+            }
+        prD[tmp_ndx] = -1*Ddiag[i];
+            //if (irD[j] == i) Ddiag[i] = -prD[j]*geo[i/Mspecies]*Chrm[i/Mspecies];
+            //for (i = jcD[col], cum = 0.0; i < jcD[col+1]; i++)
+            //if (irD[i] != col && (cum += prD[i]*geo[irD[i]/Mspecies]*Chrm[irD[i]/Mspecies]) > rand)
+        
     }
     
     /* Calculate the total diffusion rate for each subvolume. */
@@ -293,6 +361,7 @@ void nsm_core(const size_t *irD,const size_t *jcD,const double *prD,
             
             /* Search for diffusion direction. */
             for (i = jcD[col], cum = 0.0; i < jcD[col+1]; i++)
+            //if (irD[i] != col && (cum += prD[i]*geo[irD[i]/Mspecies]*Chrm[irD[i]/Mspecies]) > rand)
             if (irD[i] != col && (cum += prD[i]) > rand)
             break;
             
@@ -305,12 +374,13 @@ void nsm_core(const size_t *irD,const size_t *jcD,const double *prD,
             to_vol = to_node/Mspecies;
             
             /* c) Execute the diffusion event (check for negative elements). */
-            xx[subvol*Mspecies+spec]--;
+            //if (geo[to_vol]>0){
+	    xx[subvol*Mspecies+spec]--;
             if (xx[subvol*Mspecies+spec] < 0){
                     errcode = 1;
             }
             xx[to_node]++;
-            
+           // } 
             /* Save reaction and diffusion rates. */
             old_rrate = srrate[to_vol];
             old_drate = sdrate[to_vol];
@@ -347,11 +417,12 @@ void nsm_core(const size_t *irD,const size_t *jcD,const double *prD,
             }
             
             /* Adjust diffusion rates. */
-            sdrate[subvol] -= Ddiag[subvol*Mspecies+spec];
+           //if (geo[to_vol]>0){
+	    sdrate[subvol] -= Ddiag[subvol*Mspecies+spec];
             sdrate[to_vol] += Ddiag[to_vol*Mspecies+spec];
             
             total_diffusion++; /* counter */
-            
+           // }
         }
         
         /* Compute time to new event for this subvolume. */

@@ -53,6 +53,8 @@ int main(int argc, char *argv[])
 	char *infile,*outfile;
 	int i, nt=1, report_level;
 
+    printf("I got here\n\n");
+
 	
 	if (argc < 3) {
         perror("Too few arguments to nsm.\n");
@@ -66,6 +68,7 @@ int main(int argc, char *argv[])
 	outfile = argv[2];
 	
 	/* Read model specification */
+    mxArray *temp,*sopts;
 	urdme_model *model;
 	model = read_model(infile);
 	model->infile = infile;
@@ -93,7 +96,7 @@ int main(int argc, char *argv[])
         report_level=1;	
         //printf("mxreport is NULL, report_level=%i\n",report_level);
     }
-	model->num_extra_args=1;
+	model->num_extra_args=4;
     
 	/* Look for seed */
     mxArray *mxseed;
@@ -136,7 +139,8 @@ int main(int argc, char *argv[])
 		perror("nsmcore: Fatal error, parameter case is larger than n-dimension in parameter matrix.\n");
 		exit(-2);
 	}
-	
+
+
 	/* Create global parameter variable for this parameter case. */
     parameters = (double *)malloc(mpar*sizeof(double));
     memcpy(parameters,&matfile_parameters[mpar*(param_case-1)],mpar*sizeof(double));
@@ -147,6 +151,30 @@ int main(int argc, char *argv[])
 		model->extra_args[i]=NULL;
 	model->extra_args[0] = malloc(sizeof(int));
 	*(int *)(model->extra_args[0]) = report_level;
+
+
+    /* Set solver options */
+    printf("I got here2\n\n");
+    sopts = matGetVariable(input_file, "sopts");
+    if(sopts==NULL){
+        printf("Step length (tau_d) is missing in the model file\n");
+        return(-1);
+    }
+    model->extra_args[1] = malloc(sizeof(double));
+    model->extra_args[2] = malloc(sizeof(double));
+    model->extra_args[3] = malloc(sizeof(double));
+    double*sopts_tmp = mxGetPr(sopts);
+    //printf("HERE: tau_d=%e\n",sopts_tmp[0]);
+    //printf("HERE: max_jump=%e\n",sopts_tmp[1]);
+    //printf("HERE: err_tol=%e\n",sopts_tmp[2]);
+    *(double*)model->extra_args[1] = sopts_tmp[0];
+    *(double*)model->extra_args[2] = sopts_tmp[1];
+    *(double*)model->extra_args[3] = sopts_tmp[2];
+
+    printf("sopts_tmp %f\n",sopts_tmp[0]);
+    printf("sopts_tmp %f\n",sopts_tmp[1]);
+    printf("sopts_tmp %f\n",sopts_tmp[2]);
+	
 
 	/* Allocate memory to hold nt solutions. */
 	init_sol(model,nt);
@@ -189,7 +217,9 @@ void nsm(void *data, urdme_output_writer *writer){
 	/* nsm_core() uses a report function with optional report level. This is
 	 passed as the first extra argument. */ 
 	int report_level = *(int *)model->extra_args[0];
-	
+    double theta = *(double *)model->extra_args[2];
+    double Csize = *(double *)model->extra_args[3];
+	printf("\n\nCsize is equal to %f\n", theta);	
 	/* Output array (to hold a single trajectory) */
 	Ndofs = model->Ncells*model->Mspecies;
 	
@@ -199,7 +229,10 @@ void nsm(void *data, urdme_output_writer *writer){
 			 model->jcG, model->tspan, model->tlen, 
 			 model->vol, model->data, model->sd, model->Ncells,
 			 model->Mspecies, model->Mreactions, model->dsize, report_level,
-			 model->irK, model->jcK, model->prK, writer);
+			 model->irK, model->jcK, model->prK, writer,
+             theta,
+             Csize
+             );
     
 	
 		
