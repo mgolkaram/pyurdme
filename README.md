@@ -2,7 +2,7 @@ PyURDME in a crowded environement
 =======
 PyURDME is a modeling and simulation toolkit for spatial stochastic simulations. It makes use of a modified version of the core solver of URDME (www.urdme.org) for mesocopic simulations via the Reaction-Diffusion Master Equation (RDME), and builds on Dolfin/FeniCS (http://fenicsproject.org) for geometric modeling, meshing and Finite Element Assembly. 
 
-We have modified PyURDME to account for macromolecular crowding in a cellular environment. We have taken two major sources of macromolecualr crowding in the experimental observations by C. tan et al. Nature Nano Tech. 2013: a) Chromatin structure b) an artificial crowding agent injected to the cellular enviroment (Dex). Artificial crowding agent size and population are controlled by parameters "Csize" (i.e. \delta) and "theta" (i.e. \theta), respectively (For more information: M. Golkaram, et al. 2016. Macromolecular crowding homogenizes a cell population by diffusion limited gene expression).
+We have modified PyURDME to account for macromolecular crowding in a cellular environment. We have taken two major sources of macromolecular crowding in the experimental observations by C. tan et al. Nature Nano Tech. 2013: a) Chromatin structure b) an artificial crowding agent injected to the cellular environment (Dex). The artificial crowding agent size and population are controlled by parameters "Csize" (i.e. \delta) and "theta" (i.e. \theta), respectively (For more information: M. Golkaram, et al. 2016. Macromolecular crowding homogenizes a cell population by diffusion limited gene expression).
 
 Currently supported (tested) platforms are MacOSX >= 10.8 and Ubuntu >= 12.04.   
 
