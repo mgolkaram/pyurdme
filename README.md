@@ -1,7 +1,7 @@
-PyURDME
+PypfURDME
 =======
 
-PyURDME is a modeling and simulation toolkit for spatial stochastic simulations. It makes use of a modified version of the core solver of URDME (www.urdme.org) for mesocopic simulations via the Reaction-Diffusion Master Equation (RDME), and builds on Dolfin/FeniCS (http://fenicsproject.org) for geometric modeling, meshing and Finite Element Assembly.   
+PypfURDME is a modeling and simulation toolkit for spatial stochastic simulations with moving boundaries. It makes use of a modified version of the core solver of URDME (www.urdme.org) for mesocopic simulations via the Reaction-Diffusion Master Equation (RDME) based on phase-field method (pfRDME), and builds on Dolfin/FeniCS (http://fenicsproject.org) for geometric modeling, meshing and Finite Element Assembly.   
 
 Currently supported (tested) platforms are MacOSX >= 10.8 and Ubuntu >= 12.04.   
 
